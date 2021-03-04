@@ -11,24 +11,28 @@
 class GenAlgo {
 public:
     static const int SRC_CNT = 17;
-    static const int MAX_CNT = 100;
+    int MAX_CNT = 200;
 private:
     vector<Matrix> data;
     vector<double> values;
     vector<string> filenames;
     vector<pair<double, Matrix>> genitor_data;
-    int min_value;
-    int max_value;
+    vector<int> random_data;
+    int min_value{};
+    int max_value{};
 private:
-
+    bool find_matrix(const Matrix&);
+    void assign_random_data();
+    int get_random_matrix();
 public:
     GenAlgo()= default;
+    explicit GenAlgo(int max_cnt): MAX_CNT(max_cnt) {};
 public:
-    void read(const string&);
+    void read(const string&, int);
     void rationing();
     void choose_files();
     double calc_matrix_value(int num);
-    void make_100_matrix();
+    void make_all_matrix();
     void calc_source_values();
     void read_filenames(const string&);
     void read_source_values(const string&);

@@ -129,3 +129,13 @@ double Matrix::get_max() {
     return max;
 }
 
+bool Matrix::operator==(const Matrix &matrix1) {
+    for (int i = 0; i < 20; i++){
+        for (int j = i; j < 20; j++){
+            if (matrix[i][j] != matrix1.matrix[i][j])
+                return false;
+        }
+    }
+    return true;
+}
+

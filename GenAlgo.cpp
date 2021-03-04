@@ -4,6 +4,8 @@
 
 #include "GenAlgo.h"
 
+#include <random>
+
 std::ostream &operator<<(ostream &out, const GenAlgo &algo) {
     for (int i = 1; i <= GenAlgo::SRC_CNT; i++){
         out << "number: " << i << endl;
@@ -13,8 +15,8 @@ std::ostream &operator<<(ostream &out, const GenAlgo &algo) {
     return out;
 }
 
-void GenAlgo::read(const string& source_path) {
-    for (int i = 1; i <= GenAlgo::MAX_CNT; i++){
+void GenAlgo::read(const string& source_path, int cnt) {
+    for (int i = 1; i <= cnt; i++){
         string path = source_path + "/" + to_string(i) + ".txt";
         Matrix matrix(path);
         data.push_back(matrix);
@@ -45,9 +47,10 @@ void GenAlgo::choose_files() {
             name += p.path().string()[i];
         all_files.push_back(name);
     }
+    cout << all_files.size() << endl;
     fstream f;
     f.open("type_data/train_data.txt", ios::out | ios::ate);
-    for (int i = 0; i < 1000; i++){
+    for (int i = 0; !all_files.empty(); i++){
         int pos = rand() % all_files.size();
         f << all_files[pos] << endl;
         all_files.erase(all_files.begin() + pos);
@@ -72,6 +75,7 @@ void exec_thread(int begin, int end, vector<string> &filenames, string id, strin
         string name = filenames[i];
         string c1 = "pq/pq -alignment data/Alignments/" + name;
         c1 += ".afa -pwm result_matrix/" + num_m + ".txt -out trees/res" + id + ".txt";
+        c1 += " -grType one -nniType none -randLeaves 0";
 
         string c2 = "rf_dist/a.out data/References/" + name;
         c2 += ".tre trees/res" + id + ".txt";
@@ -82,14 +86,17 @@ void exec_thread(int begin, int end, vector<string> &filenames, string id, strin
 
 double GenAlgo::calc_matrix_value(int num) {
     auto begin = std::chrono::steady_clock::now();
-    thread t1(exec_thread, 0, 249, ref(filenames), "1", to_string(num));
-    thread t2(exec_thread, 250, 499, ref(filenames), "2", to_string(num));
-    thread t3(exec_thread, 500, 749, ref(filenames), "3", to_string(num));
-    thread t4(exec_thread, 750, 999, ref(filenames), "4", to_string(num));
-    t1.join();
-    t2.join();
-    t3.join();
-    t4.join();
+    int cnt_threads = 10;
+    int size = filenames.size() / cnt_threads;
+    vector<thread> threads;
+    for (int i = 0; i < cnt_threads; i++) {
+        threads.emplace_back(exec_thread, size * i, size * (i + 1) - 1,
+               ref(filenames), to_string(i + 1),
+               to_string(num));
+    }
+    for (int i = 0; i < threads.size(); i++){
+        threads[i].join();
+    }
     fstream f{"result.txt"};
     double sum = 0;
     while (!f.eof()){
@@ -104,9 +111,9 @@ double GenAlgo::calc_matrix_value(int num) {
     return sum / filenames.size();
 }
 
-void GenAlgo::make_100_matrix() {
-    for (int i = 18; i <= 100; i++){
-        int first = rand() % 18;
+void GenAlgo::make_all_matrix() {
+    for (int i = 18; i <= MAX_CNT; i++){
+        int first = 0;
         int second = rand() % 18;
         while (first == second) second = rand() % 18;
         Matrix newm = Matrix::hybridization(data[first], data[second]);
@@ -117,7 +124,7 @@ void GenAlgo::make_100_matrix() {
 
 void GenAlgo::calc_source_values() {
     ofstream f{"source_values/all_values.txt", ios::out | ios::ate};
-    for (int i = 1; i <= 100; i++){
+    for (int i = 1; i <= MAX_CNT; i++){
         double res = calc_matrix_value(i);
         f << res << endl;
         cout << "number: " << i << ", value: " << res << endl;
@@ -141,7 +148,7 @@ bool comp(pair<double, Matrix> a, pair<double, Matrix> b){
 void GenAlgo::read_source_values(const string& path) {
     fstream f{path, ios::in};
     int pos = 0;
-    while (pos < 100){
+    while (pos < MAX_CNT){
         double value;
         f >> value;
         genitor_data.emplace_back(value, data[pos]);
@@ -151,23 +158,25 @@ void GenAlgo::read_source_values(const string& path) {
 }
 
 void GenAlgo::Genitor() {
+    assign_random_data();
     int cnt = 0;
     int type = 1;
     Matrix newm;
-    while (cnt < 1000){
+    cout << data.size() << endl;
+    while (true){
         if (cnt % 20 == 0){
             write("backup_genitor_matrix");
             cout << "Current best value: " << genitor_data.front().first << endl;
         }
         if (type == 1){
-            int first_pos = rand() % genitor_data.size(), second_pos = rand() % genitor_data.size();
+            int first_pos = get_random_matrix(), second_pos = get_random_matrix();
             auto first = genitor_data[first_pos].second;
             auto second = genitor_data[second_pos].second;
             newm = Matrix::hybridization(first, second);
             cout << "Hybridization: " << first_pos << " and " << second_pos << endl;
         }
         else{
-            int pos = rand() % genitor_data.size();
+            int pos = get_random_matrix();
             auto source_matrix = genitor_data[pos].second;
             newm = source_matrix;
             newm.mutation(min_value, max_value);
@@ -177,9 +186,9 @@ void GenAlgo::Genitor() {
         f << newm;
         double res = calc_matrix_value(-1);
         cout << "Value: " << res << ", worst value: " << genitor_data.back().first << endl;
-        if (res < genitor_data.back().first){
+        pair<double, Matrix> new_element = {res, newm};
+        if (res < genitor_data.back().first && !find_matrix(newm)){
             genitor_data.pop_back();
-            pair<double, Matrix> new_element = {res, newm};
             auto pos = genitor_data.begin();
             for (; pos->first < res; pos++);
             genitor_data.insert(pos, new_element);
@@ -213,6 +222,28 @@ void GenAlgo::make_min_max() {
     }
     max_value = int(max);
     min_value = int(min);
+}
+
+bool GenAlgo::find_matrix(const Matrix& matrix) {
+    for (auto element : genitor_data){
+        if (element.second == matrix)
+            return true;
+    }
+    return false;
+}
+
+void GenAlgo::assign_random_data() {
+    for (int i = 0; i < MAX_CNT; i++){
+        for (int j = 0; j < MAX_CNT - i; j++)
+            random_data.push_back(i);
+    }
+    shuffle(random_data.begin(), random_data.end(), std::mt19937(std::random_device()()));
+}
+
+int GenAlgo::get_random_matrix() {
+    int pos = rand() % random_data.size();
+    //cout << random_data.size() << " " << pos << endl;
+    return random_data[pos];
 }
 
 

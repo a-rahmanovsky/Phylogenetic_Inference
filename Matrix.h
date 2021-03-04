@@ -31,6 +31,7 @@ public:
     friend std::ostream& operator<< (std::ostream &, const Matrix &);
     friend std::istream & operator>> (std::istream &, Matrix &);
     Matrix& operator = (const Matrix&);
+    bool operator == (const Matrix&);
 };
 
 
