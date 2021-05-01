@@ -7,13 +7,13 @@ void choose_data(GenAlgo &ga){
 void normalize_source(GenAlgo& ga){
     ga.read("source_matrix", ga.SRC_CNT);
     ga.rationing();
-    ga.write("result_matrix");
+    ga.write("result_matrix", false);
 }
 
 void create_all_from_17(GenAlgo &ga, int max){
     ga.read("result_matrix", ga.SRC_CNT);
     ga.make_all_matrix();
-    ga.write("result_matrix");
+    ga.write("result_matrix", false);
 }
 
 void eval_base_values(GenAlgo &ga){

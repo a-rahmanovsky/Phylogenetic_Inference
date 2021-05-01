@@ -40,7 +40,7 @@ public:
     void Genitor();
 public:
     friend std::ostream& operator<< (std::ostream &, const GenAlgo &);
-    void write(string);
+    void write(string, bool);
 };
 
 

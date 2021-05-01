@@ -29,12 +29,21 @@ void GenAlgo::rationing() {
     }
 }
 
-void GenAlgo::write(string path) {
+void GenAlgo::write(string path, bool flag=false) {
     ofstream f;
-    for (int i = 0; i < data.size(); i++){
-        f.open(path + '/' + to_string(i + 1) + ".txt");
-        f << data[i];
-        f.close();
+    if (!flag) {
+        for (int i = 0; i < data.size(); i++) {
+            f.open(path + '/' + to_string(i + 1) + ".txt");
+            f << data[i];
+            f.close();
+        }
+    }
+    else{
+        for (int i = 0; i < genitor_data.size(); i++) {
+            f.open(path + '/' + to_string(i + 1) + ".txt");
+            f << genitor_data[i].second;
+            f.close();
+        }
     }
 }
 
@@ -165,7 +174,7 @@ void GenAlgo::Genitor() {
     cout << data.size() << endl;
     while (true){
         if (cnt % 20 == 0){
-            write("backup_genitor_matrix");
+            write("backup_genitor_matrix", true);
             cout << "Current best value: " << genitor_data.front().first << endl;
         }
         if (type == 1){
@@ -200,6 +209,12 @@ void GenAlgo::Genitor() {
                 fbest << newm;
                 fbest << endl;
                 fbest << res;
+
+                ofstream fbest_backup{"backup_best_matrix.txt", ios::app};
+                fbest_backup << newm;
+                fbest_backup << endl;
+                fbest_backup << res;
+                fbest_backup << endl;
             }
             else {
                 cnt++;
